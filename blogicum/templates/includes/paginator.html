@@ -5,7 +5,8 @@
         <li class="page-item"><a class="page-link" href="?page=1">Первая</a></li>
         <li class="page-item">
           <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
-            << </a>
+            <<
+          </a>
         </li>
       {% endif %}
       {% for i in page_obj.paginator.page_range %}
