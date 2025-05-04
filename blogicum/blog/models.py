@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.core.exceptions import ValidationError
 User = get_user_model()
 
 
@@ -31,8 +30,8 @@ class Category(models.Model):
     slug = models.SlugField(
         unique=True,
         verbose_name='Идентификатор',
-        help_text='Идентификатор страницы для URL; ' +
-        'разрешены символы латиницы, цифры, дефис и подчёркивание.'
+        help_text='Идентификатор страницы для URL; ' 
+        + 'разрешены символы латиницы, цифры, дефис и подчёркивание.'
     )
     is_published = models.BooleanField(
         default=True,
@@ -59,8 +58,8 @@ class Post(models.Model):
     image = models.ImageField('Фото', upload_to='post_images', blank=True)
     pub_date = models.DateTimeField(
         verbose_name='Дата и время публикации',
-        help_text='Если установить дату и время в будущем ' +
-        '— можно делать отложенные публикации.',
+        help_text='Если установить дату и время в будущем '
+        + '— можно делать отложенные публикации.',
         default=timezone.now,
     )
     author = models.ForeignKey(

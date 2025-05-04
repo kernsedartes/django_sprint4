@@ -1,15 +1,14 @@
 from django.views.generic import (
-    CreateView, DeleteView, DetailView, ListView, UpdateView
+    CreateView, DeleteView, UpdateView
 )
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, get_object_or_404
-from django.shortcuts import get_list_or_404, redirect
-from .models import Category, Post, Comment, Location
-from django.urls import reverse_lazy, reverse
+from django.shortcuts import redirect
+from .models import Category, Post, Comment
+from django.urls import reverse
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.http import Http404
-from django.db.models import Q
 from django.http import HttpResponseNotFound
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -43,11 +42,11 @@ def post_detail(request, post_id):
 
     if request.user != post.author:
         if not (
-            post.is_published and
-            post.pub_date <= timezone.now() and
-            post.category.is_published and
-            post.location.is_published and
-            post.author.is_active
+            post.is_published 
+            and post.pub_date <= timezone.now()
+            and post.category.is_published
+            and post.location.is_published
+            and post.author.is_active
         ):
             raise Http404("Пост не найден")
 
@@ -212,7 +211,7 @@ class DeletePostView(LoginRequiredMixin, DeleteView):
             self.object.delete()
             return redirect('blog:profile', username=request.user.username)
 
-        except Exception as e:
+        except Exception:
             return redirect('blog:post_detail', post_id=kwargs.get('post_id'))
 
     def get_context_data(self, **kwargs):
@@ -232,7 +231,7 @@ class DeletePostView(LoginRequiredMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         try:
             return super().delete(request, *args, **kwargs)
-        except Exception as e:
+        except Exception:
             return redirect(
                 'blog:post_detail',
                 post_id=self.kwargs.get('post_id')
