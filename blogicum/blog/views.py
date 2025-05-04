@@ -14,37 +14,16 @@ from django.http import HttpResponseNotFound
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from .forms import PostForm, CommentForm, EditProfileForm
-from django.db.models import Exists, OuterRef
 User = get_user_model()
 
 
 def index(request):
-    # Оптимизированный запрос с явной проверкой всех условий
-    post_list = Post.objects.annotate(
-        has_published_category=Exists(
-            Category.objects.filter(
-                pk=OuterRef('category_id'),
-                is_published=True
-            )
-        ),
-        has_published_location=Exists(
-            Location.objects.filter(
-                pk=OuterRef('location_id'),
-                is_published=True
-            )
-        ),
-        has_active_author=Exists(
-            User.objects.filter(
-                pk=OuterRef('author_id'),
-                is_active=True
-            )
-        )
-    ).filter(
+    post_list = Post.objects.filter(
         is_published=True,
         pub_date__lte=timezone.now(),
-        has_published_category=True,
-        has_published_location=True,
-        has_active_author=True
+        category__is_published=True,
+        location__is_published=True,
+        author__is_active=True
     ).select_related('category', 'location', 'author').order_by('-pub_date')
 
     paginator = Paginator(post_list, 10)
@@ -62,13 +41,11 @@ def post_detail(request, post_id):
         pk=post_id
     )
 
-    # Проверяем базовые условия видимости
     if not (post.category.is_published and
             post.location.is_published and
             post.author.is_active):
         raise Http404("Пост не найден")
 
-    # Проверяем доступ для неопубликованных/отложенных постов
     if not post.is_published or post.pub_date > timezone.now():
         if not request.user.is_authenticated or request.user != post.author:
             raise Http404("Пост не найден")
@@ -88,7 +65,7 @@ def category_posts(request, category_slug):
     category = get_object_or_404(
         Category,
         slug=category_slug,
-        is_published=True  # Проверяем, что категория опубликована
+        is_published=True
     )
 
     post_list = Post.objects.filter(
@@ -112,10 +89,8 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
 
     if request.user == author:
-        # Автор видит все свои посты
         post_list = Post.objects.filter(author=author)
     else:
-        # Другие видят только опубликованные
         post_list = Post.objects.filter(
             author=author,
             is_published=True,
@@ -145,7 +120,6 @@ class EditProfileView(UpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         user = self.get_object()
-        # Проверяем, является ли пользователь владельцем профиля
         if user != request.user:
             return redirect('blog:index')
         return super().dispatch(request, *args, **kwargs)
@@ -224,7 +198,7 @@ class DeletePostView(LoginRequiredMixin, DeleteView):
             messages.error(self.request, 'Пост не найден')
             raise
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request, **kwargs):
         try:
             self.object = self.get_object()
             if self.object.author != request.user:

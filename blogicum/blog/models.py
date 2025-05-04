@@ -110,7 +110,7 @@ class Post(models.Model):
         """Автоматическая публикация при наступлении даты"""
         super().clean()
 
-        if self.should_be_published and self.is_published is False:
+        if self.should_be_published and not self.is_published:
             self.is_published = True
 
     def save(self, *args, **kwargs):
@@ -120,7 +120,7 @@ class Post(models.Model):
     class Meta:
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
-        ordering = ('created_at',)
+        ordering = ('-pub_date',)
 
     def __str__(self):
         return self.title
