@@ -41,13 +41,14 @@ def post_detail(request, post_id):
         pk=post_id
     )
 
-    if not (post.category.is_published and
+    if request.user != post.author:
+        if not (
+            post.is_published and
+            post.pub_date <= timezone.now() and
+            post.category.is_published and
             post.location.is_published and
-            post.author.is_active):
-        raise Http404("Пост не найден")
-
-    if not post.is_published or post.pub_date > timezone.now():
-        if not request.user.is_authenticated or request.user != post.author:
+            post.author.is_active
+        ):
             raise Http404("Пост не найден")
 
     comments = post.comments.filter(is_published=True)
@@ -119,6 +120,9 @@ class EditProfileView(UpdateView):
         return self.request.user
 
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+
         user = self.get_object()
         if user != request.user:
             return redirect('blog:index')
@@ -153,11 +157,11 @@ class EditPostView(LoginRequiredMixin, UpdateView):
     template_name = 'blog/create.html'
     form_class = PostForm
     model = Post
+    pk_url_kwarg = 'post_id'
 
     def get_object(self, queryset=None):
-        # Получаем post_id из URL
-        post_id = self.kwargs.get('post_id')
-        return get_object_or_404(Post, pk=post_id)
+        post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
+        return post
 
     def form_valid(self, form):
         # Проверяем, является ли публикация отложенной
@@ -178,7 +182,8 @@ class EditPostView(LoginRequiredMixin, UpdateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         # Убедимся, что автор не может быть изменен через форму
-        kwargs['instance'].author = self.request.user
+        if 'instance' in kwargs:
+            kwargs['instance'].author = self.request.user
         return kwargs
 
 
@@ -274,7 +279,7 @@ class EditCommentView(LoginRequiredMixin, UpdateView):
         comment = self.get_object()
         # Проверяем, является ли пользователь автором комментария
         if comment.author != request.user:
-            return redirect('blog:post_detail', pk=comment.post.pk)
+            return redirect('blog:post_detail', post_id=comment.post.pk)
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
@@ -287,6 +292,7 @@ class EditCommentView(LoginRequiredMixin, UpdateView):
 class DeleteCommentView(LoginRequiredMixin, DeleteView):
     template_name = 'blog/comment.html'
     model = Comment
+    pk_url_kwarg = 'comment_id'
 
     def get_object(self, queryset=None):
         # Получаем и post_id и comment_id из URL
@@ -298,8 +304,14 @@ class DeleteCommentView(LoginRequiredMixin, DeleteView):
         comment = self.get_object()
         # Проверяем, является ли пользователь автором комментария
         if comment.author != request.user:
-            return redirect('blog:post_detail', pk=comment.post.pk)
+            return redirect('blog:post_detail', post_id=comment.post.pk)
         return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Удаляем форму из контекста, если она есть
+        context.pop('form', None)
+        return context
 
     def get_success_url(self):
         return reverse(

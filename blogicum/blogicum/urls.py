@@ -19,7 +19,6 @@ from users.views import SignUp, SignIn, LoggedOut
 from django.views.generic import TemplateView
 from django.conf.urls.static import static
 from django.conf import settings
-from debug_toolbar.toolbar import debug_toolbar_urls
 
 handler404 = 'pages.views.page_404'
 handler403 = 'pages.views.page_403'
@@ -45,4 +44,4 @@ urlpatterns = [
 ] + static(
     settings.MEDIA_URL,
     document_root=settings.MEDIA_ROOT
-) + debug_toolbar_urls()
+)

@@ -96,24 +96,9 @@ class Post(models.Model):
         """Количество опубликованных комментариев"""
         return self.comments.filter(is_published=True).count()
 
-    @property
-    def should_be_published(self):
-        """Должен ли пост быть опубликован по дате"""
-        return self.pub_date <= timezone.now()
-
-    @property
-    def is_visible(self):
-        """Виден ли пост всем пользователям"""
-        return self.is_published and self.should_be_published
-
-    def clean(self):
-        """Автоматическая публикация при наступлении даты"""
-        super().clean()
-
-        if self.should_be_published and not self.is_published:
-            self.is_published = True
-
     def save(self, *args, **kwargs):
+        if self.pub_date <= timezone.now() and self.is_published is True:
+            self.is_published = True
         self.full_clean()
         super().save(*args, **kwargs)
 
